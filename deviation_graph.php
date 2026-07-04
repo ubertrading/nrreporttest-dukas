@@ -254,6 +254,9 @@ foreach ($data as $evTimeStr => $row) {
         
         if (maxVal !== '') {
             deviationChart.options.scales.y.max = parseFloat(maxVal);
+            if (minVal === '') {
+                deviationChart.options.scales.y.min = -parseFloat(maxVal);
+            }
         } else {
             delete deviationChart.options.scales.y.max;
         }

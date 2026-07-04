@@ -443,7 +443,7 @@ function getCalendar() {
 
             var devLink = dev !== "" ? '<a href="deviation_graph.php?newsId=' + encodeURIComponent(row.news_id) + '&news=' + encodeURIComponent(row.news) + '&v=' + Date.now() + '" target="_blank" style="color: inherit; text-decoration: none;">' + escapeHtml(dev) + '</a>' : '';
             var actualVal = fixNumber(row.value);
-            var actualLink = actualVal !== "" ? '<a href="actual_graph.php?newsId=' + encodeURIComponent(row.news_id) + '&news=' + encodeURIComponent(row.news) + '&v=' + Date.now() + '" target="_blank" style="color: inherit; text-decoration: none;">' + escapeHtml(actualVal) + '</a>' : '';
+            var actualLink = (actualVal !== "" && actualVal !== undefined && actualVal !== null) ? '<a href="actual_graph.php?newsId=' + encodeURIComponent(row.news_id) + '&news=' + encodeURIComponent(row.news) + '&v=' + Date.now() + '" target="_blank" style="color: inherit; text-decoration: none;">' + escapeHtml(actualVal) + '</a>' : '';
 
             htmlParts.push(
               '<tr class="' + trClass + '" ' + trStyle + '>' +

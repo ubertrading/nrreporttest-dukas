@@ -94,6 +94,22 @@ function deviation(value, forecast) {
 
 
 
+// Helper to parse URL parameters
+function getUrlParameter(sParam) {
+    var sPageURL = window.location.search.substring(1),
+        sURLVariables = sPageURL.split('&'),
+        sParameterName,
+        i;
+
+    for (i = 0; i < sURLVariables.length; i++) {
+        sParameterName = sURLVariables[i].split('=');
+        if (sParameterName[0] === sParam) {
+            return sParameterName[1] === undefined ? true : decodeURIComponent(sParameterName[1].replace(/\+/g, ' '));
+        }
+    }
+    return false;
+}
+
 // Shared dropdown infrastructure - only ONE Select2 instance for the entire page
 var $sharedDropdownContainer = null;
 var activeFormData = null;
@@ -400,14 +416,19 @@ function getCalendar() {
             var trClass = isFirstInGroup ? '' : ('group-row-' + safeKey);
             var trStyle = isFirstInGroup ? '' : 'style="display:none;"';
 
-            var idContent = '<div class="d-flex align-items-center flex-nowrap">' + toggleBtn + '<span>' + escapeHtml(row.news_id) + '</span></div>';
+            var historyUrlId = 'nrreport.html?newsId=' + encodeURIComponent(row.news_id) + '&datefrom=2000-01-01';
+            var idLink = '<a href="' + historyUrlId + '" target="_blank" style="color: inherit; text-decoration: underline;">' + escapeHtml(row.news_id) + '</a>';
+            var idContent = '<div class="d-flex align-items-center flex-nowrap">' + toggleBtn + '<span>' + idLink + '</span></div>';
+
+            var historyUrlName = 'nrreport.html?news=' + encodeURIComponent(row.news) + '&datefrom=2000-01-01';
+            var nameLink = '<a href="' + historyUrlName + '" target="_blank" style="color: inherit; text-decoration: underline;">' + escapeHtml(row.news) + '</a>';
 
             htmlParts.push(
               '<tr class="' + trClass + '" ' + trStyle + '>' +
               '<td style="white-space: nowrap;">' + idContent + '</td>' +
               '<td style="white-space: nowrap;">' + escapeHtml(dtevent) + '</td>' +
               '<td><span title="' + escapeHtml(dttimestamp_hover) + '">' + escapeHtml(dttimestamp) + '</span></td>' +
-              '<td style="white-space: nowrap;">' + escapeHtml(row.news) + '</td>' +
+              '<td style="white-space: nowrap;">' + nameLink + '</td>' +
               '<td>' + escapeHtml(fixNumber(row.prior)) + '</td>' +
               '<td>' + escapeHtml(fixNumber(row.forecast_avg)) + '</td>' +
               '<td>' + escapeHtml(fixNumber(row.forecast)) + '</td>' +
@@ -443,25 +464,42 @@ $(function () {
   moment.tz.add(["America/New_York|EST EDT EWT EPT|50 40 40 40|01010101010101010101010101010101010101010101010102301010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010|-261t0 1nX0 11B0 1nX0 11B0 1qL0 1a10 11z0 1qN0 WL0 1qN0 11z0 1o10 11z0 1o10 11z0 1o10 11z0 1o10 11z0 1qN0 11z0 1o10 11z0 1o10 11z0 1o10 11z0 1o10 11z0 1qN0 WL0 1qN0 11z0 1o10 11z0 1o10 11z0 1o10 11z0 1o10 11z0 1qN0 WL0 1qN0 11z0 1o10 11z0 RB0 8x40 iv0 1o10 11z0 1o10 11z0 1o10 11z0 1o10 11z0 1qN0 WL0 1qN0 11z0 1o10 11z0 1o10 11z0 1o10 11z0 1o10 1fz0 1cN0 1cL0 1cN0 1cL0 1cN0 1cL0 1cN0 1cL0 1cN0 1fz0 1cN0 1cL0 1cN0 1cL0 1cN0 1cL0 1cN0 1cL0 1cN0 1fz0 1a10 1fz0 1cN0 1cL0 1cN0 1cL0 1cN0 1cL0 1cN0 1cL0 1cN0 1fz0 1cN0 1cL0 1cN0 1cL0 s10 1Vz0 LB0 1BX0 1cN0 1fz0 1a10 1fz0 1cN0 1cL0 1cN0 1cL0 1cN0 1cL0 1cN0 1cL0 1cN0 1fz0 1a10 1fz0 1cN0 1cL0 1cN0 1cL0 1cN0 1cL0 14p0 1lb0 14p0 1nX0 11B0 1nX0 11B0 1nX0 14p0 1lb0 14p0 1lb0 14p0 1nX0 11B0 1nX0 11B0 1nX0 14p0 1lb0 14p0 1lb0 14p0 1lb0 14p0 1nX0 11B0 1nX0 11B0 1nX0 14p0 1lb0 14p0 1lb0 14p0 1nX0 11B0 1nX0 11B0 1nX0 Rd0 1zb0 Op0 1zb0 Op0 1zb0 Rd0 1zb0 Op0 1zb0 Op0 1zb0 Op0 1zb0 Op0 1zb0 Op0 1zb0 Rd0 1zb0 Op0 1zb0 Op0 1zb0 Op0 1zb0 Op0 1zb0 Rd0 1zb0 Op0 1zb0 Op0 1zb0 Op0 1zb0 Op0 1zb0 Op0 1zb0 Rd0 1zb0 Op0 1zb0 Op0 1zb0 Op0 1zb0 Op0 1zb0 Rd0 1zb0 Op0 1zb0 Op0 1zb0 Op0 1zb0 Op0 1zb0 Op0 1zb0|21e6"
   ]);
 
+  var urlDateFrom = getUrlParameter('datefrom');
+  var dt1 = urlDateFrom ? moment(urlDateFrom) : moment().day(1);
   $('#datetimepicker1').datetimepicker({
     format: 'YYYY-MM-DD',
     icons: {
       date: 'fa fa-calendar'
     },
     useCurrent: false,
-    date: moment().day(1)
-
+    date: dt1
   });
+
+  var urlDateTo = getUrlParameter('dateto');
+  var dt2 = urlDateTo ? moment(urlDateTo) : moment().day(7);
   $('#datetimepicker2').datetimepicker({
     format: 'YYYY-MM-DD',
     icons: {
       date: 'fa fa-calendar'
     },
     useCurrent: false,
-    date: moment().day(7)
+    date: dt2
   });
 
   $(document).ready(function () {
+    var urlNewsId = getUrlParameter('newsId');
+    if (urlNewsId) {
+      $('#newsId').val(urlNewsId);
+    }
+    var urlNews = getUrlParameter('news');
+    if (urlNews) {
+      $('#news').val(urlNews);
+    }
+    var urlSite = getUrlParameter('site');
+    if (urlSite) {
+      $('#site').val(urlSite);
+    }
+
     // Initialize dark theme checkbox (default: on)
     var darkPref = localStorage.getItem('darkTheme');
     $('#darkTheme').prop('checked', darkPref !== 'false');

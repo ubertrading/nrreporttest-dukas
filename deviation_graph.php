@@ -152,17 +152,31 @@ foreach ($data as $evTimeStr => $row) {
 
   <h2><?php echo htmlspecialchars($news_title); ?> - Historical Deviations</h2>
   
+  <div style="text-align: center; margin-bottom: 20px;">
+      <label for="minY" style="color: var(--font-color);">Min Y:</label>
+      <input type="number" id="minY" style="width: 80px; margin-right: 15px; padding: 4px; background: transparent; color: var(--font-color); border: 1px solid #555;">
+      
+      <label for="maxY" style="color: var(--font-color);">Max Y:</label>
+      <input type="number" id="maxY" style="width: 80px; margin-right: 15px; padding: 4px; background: transparent; color: var(--font-color); border: 1px solid #555;">
+      
+      <button onclick="updateChartScale()" style="padding: 4px 12px; cursor: pointer; background: #333; color: #fff; border: 1px solid #555;">Apply Scale</button>
+      <button onclick="resetChartScale()" style="padding: 4px 12px; cursor: pointer; margin-left: 5px; background: #333; color: #fff; border: 1px solid #555;">Reset</button>
+  </div>
+  
   <div class="chart-container">
     <canvas id="deviationChart"></canvas>
   </div>
 
   <script>
+    var isDark = localStorage.getItem('darkTheme') !== 'false';
+    document.documentElement.style.setProperty('--font-color', isDark ? '#ccc' : '#666');
+    
     var ctx = document.getElementById('deviationChart').getContext('2d');
     var labels = <?php echo json_encode(array_values($labels)); ?>;
     var data = <?php echo json_encode(array_values($deviations)); ?>;
     var colors = <?php echo json_encode(array_values($colors)); ?>;
 
-    new Chart(ctx, {
+    var deviationChart = new Chart(ctx, {
       type: 'bar',
       data: {
         labels: labels,
@@ -204,6 +218,33 @@ foreach ($data as $evTimeStr => $row) {
         }
       }
     });
+    
+    function updateChartScale() {
+        var minVal = document.getElementById('minY').value;
+        var maxVal = document.getElementById('maxY').value;
+        
+        if (minVal !== '') {
+            deviationChart.options.scales.y.min = parseFloat(minVal);
+        } else {
+            delete deviationChart.options.scales.y.min;
+        }
+        
+        if (maxVal !== '') {
+            deviationChart.options.scales.y.max = parseFloat(maxVal);
+        } else {
+            delete deviationChart.options.scales.y.max;
+        }
+        
+        deviationChart.update();
+    }
+
+    function resetChartScale() {
+        document.getElementById('minY').value = '';
+        document.getElementById('maxY').value = '';
+        delete deviationChart.options.scales.y.min;
+        delete deviationChart.options.scales.y.max;
+        deviationChart.update();
+    }
   </script>
 </body>
 </html>

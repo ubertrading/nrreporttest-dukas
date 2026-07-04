@@ -124,6 +124,37 @@ if (isset($_POST["action"])) {
       }
       $conn->close();
     }
+  } else if ($_POST["action"] === "updateEvent") {
+    $site = isset($_POST['site']) && !empty($_POST['site']) ? $_POST['site'] : 'NY';
+    $tbl_prefix = strtolower($site) . "_";
+    $servername = $db_servername;
+    $username = $db_username;
+    $password = $db_password;
+    $database = $db_database;
+    $table = $tbl_prefix . $db_table;
+
+    $conn = new mysqli($servername, $username, $password, $database);
+    if ($conn->connect_error) {
+      $response["status"] = "error";
+      $response["data"] = "Error connecting to database.";
+    } else {
+      $news_id = intval($_POST['news_id']);
+      $event_time = intval($_POST['event_time']);
+      $source = $conn->real_escape_string($_POST['source']);
+      $val = $conn->real_escape_string($_POST['value']);
+      $forecast = $conn->real_escape_string($_POST['forecast']);
+      $forecast_avg = $conn->real_escape_string($_POST['forecast_avg']);
+      $prior = $conn->real_escape_string($_POST['prior']);
+
+      $sql = "UPDATE `{$table}` SET `value`='{$val}', `forecast`='{$forecast}', `forecast_avg`='{$forecast_avg}', `prior`='{$prior}' WHERE `news_id`={$news_id} AND `event_time`={$event_time} AND `source`='{$source}'";
+      if ($conn->query($sql) === TRUE) {
+        $response["status"] = "success";
+      } else {
+        $response["status"] = "error";
+        $response["data"] = $conn->error;
+      }
+      $conn->close();
+    }
   } else {
     $response["status"] = "error";
     $response["data"] = "unsupported query.";

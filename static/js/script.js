@@ -409,6 +409,15 @@ function getCalendar() {
                 dataAttrs + ' data-charturl="graph_dukas.php" onclick="showSymbolDropdown(this)">DUKA</button> ' +
                 '<button type="button" class="btn btn-sm btn-outline-light" ' +
                 dataAttrs + ' onclick="openDukasMultiChart(this)">DUKA+</button>' +
+                '<button type="button" class="btn btn-sm btn-outline-warning ml-1" title="Edit Data" ' +
+                'data-newsid="' + escapeHtml(row.news_id) + '" ' +
+                'data-eventtime="' + escapeHtml(row.event_time) + '" ' +
+                'data-source="' + escapeHtml(row.source) + '" ' +
+                'data-value="' + escapeHtml(row.value) + '" ' +
+                'data-forecast="' + escapeHtml(row.forecast) + '" ' +
+                'data-forecastavg="' + escapeHtml(row.forecast_avg) + '" ' +
+                'data-prior="' + escapeHtml(row.prior) + '" ' +
+                'onclick="openEditModal(this)"><i class="fa fa-pencil"></i></button>' +
                 '</div>';
             }
 
@@ -541,3 +550,38 @@ $(function () {
     getCalendar();
   });
 });
+
+function openEditModal(btn) {
+  var $btn = $(btn);
+  $('#edit_news_id').val($btn.data('newsid'));
+  $('#edit_event_time').val($btn.data('eventtime'));
+  $('#edit_source').val($btn.data('source'));
+  $('#edit_actual').val($btn.data('value'));
+  $('#edit_forecast').val($btn.data('forecast'));
+  $('#edit_forecast_avg').val($btn.data('forecastavg'));
+  $('#edit_prior').val($btn.data('prior'));
+  $('#editEventModal').modal('show');
+}
+
+function saveEventEdits() {
+  var data = {
+    action: 'updateEvent',
+    news_id: $('#edit_news_id').val(),
+    event_time: $('#edit_event_time').val(),
+    source: $('#edit_source').val(),
+    value: $('#edit_actual').val(),
+    forecast: $('#edit_forecast').val(),
+    forecast_avg: $('#edit_forecast_avg').val(),
+    prior: $('#edit_prior').val()
+  };
+
+  $.post('nrreport.php', data, function(resp) {
+    if (resp && resp.status === 'success') {
+      $('#editEventModal').modal('hide');
+      getCalendar();
+    } else {
+      alert("Error updating event.");
+    }
+  }, 'json');
+}
+

@@ -101,7 +101,7 @@ if (isset($_POST["action"])) {
       }
 
       $sql .= " GROUP BY `event_time`, `news_id`, `news`, `value`, `forecast`, `forecast_avg`, `prior`, `source`";
-      $sql .= " ORDER by `event_time`, `news_id` ASC, `timestamp`=0 ASC, `timestamp` ASC ";
+      $sql .= " ORDER by `event_time`, `news_id` ASC, MIN(`timestamp`) = 0 ASC, MIN(`timestamp`) ASC ";
       //$sql .= " ORDER by `event_time`,`news_id ASC`,`timestamp ASC`";
       // $_sql = "SELECT
 

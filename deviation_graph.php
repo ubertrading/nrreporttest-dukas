@@ -49,10 +49,16 @@ if ($res) {
         if ($dev !== null) {
             $evTimeStr = date('Y-m-d H:i', $row['event_time'] / 1000);
             $ts = (int)$row['timestamp'];
+            $evTimeMs = (int)$row['event_time'];
+            
+            // Completely ignore bogus ticks that arrive more than 1 hour BEFORE the scheduled event
+            if ($ts != 0 && $ts < ($evTimeMs - 3600000)) {
+                continue;
+            }
             
             if (!isset($data[$evTimeStr])) {
                 $data[$evTimeStr] = [
-                    'time' => (int)$row['event_time'],
+                    'time' => $evTimeMs,
                     'dev' => round($dev, 5),
                     'timestamp' => $ts
                 ];
@@ -69,7 +75,7 @@ if ($res) {
 
                 if ($isNewEarlier) {
                     $data[$evTimeStr] = [
-                        'time' => (int)$row['event_time'],
+                        'time' => $evTimeMs,
                         'dev' => round($dev, 5),
                         'timestamp' => $ts
                     ];

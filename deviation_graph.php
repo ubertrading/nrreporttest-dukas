@@ -308,6 +308,17 @@ foreach ($data as $evTimeStr => $row) {
         
         deviationChart.update();
     }
+    
+    // Default to 12 months history
+    window.onload = function() {
+        var d = new Date();
+        d.setFullYear(d.getFullYear() - 1);
+        var year = d.getFullYear();
+        var month = String(d.getMonth() + 1).padStart(2, '0');
+        var day = String(d.getDate()).padStart(2, '0');
+        document.getElementById('fromDate').value = year + '-' + month + '-' + day;
+        updateChartScale();
+    };
   </script>
 </body>
 </html>

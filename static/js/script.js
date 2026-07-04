@@ -442,6 +442,8 @@ function getCalendar() {
             var dateLink = '<a href="' + historyUrlDate + '" target="_blank" style="color: inherit; text-decoration: none;">' + escapeHtml(dtevent) + '</a>';
 
             var devLink = dev !== "" ? '<a href="deviation_graph.php?newsId=' + encodeURIComponent(row.news_id) + '&news=' + encodeURIComponent(row.news) + '&v=' + Date.now() + '" target="_blank" style="color: inherit; text-decoration: none;">' + escapeHtml(dev) + '</a>' : '';
+            var actualVal = fixNumber(row.value);
+            var actualLink = actualVal !== "" ? '<a href="actual_graph.php?newsId=' + encodeURIComponent(row.news_id) + '&news=' + encodeURIComponent(row.news) + '&v=' + Date.now() + '" target="_blank" style="color: inherit; text-decoration: none;">' + escapeHtml(actualVal) + '</a>' : '';
 
             htmlParts.push(
               '<tr class="' + trClass + '" ' + trStyle + '>' +
@@ -452,7 +454,7 @@ function getCalendar() {
               '<td>' + escapeHtml(fixNumber(row.prior)) + '</td>' +
               '<td>' + escapeHtml(fixNumber(row.forecast_avg)) + '</td>' +
               '<td>' + escapeHtml(fixNumber(row.forecast)) + '</td>' +
-              '<td>' + escapeHtml(fixNumber(row.value)) + '</td>' +
+              '<td>' + actualLink + '</td>' +
               '<td>' + devLink + '</td>' +
               '<td>' + escapeHtml(src) + '</td>' +
               '<td>' + graphCell + '</td>' +

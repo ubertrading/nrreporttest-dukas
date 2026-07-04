@@ -207,11 +207,7 @@ foreach ($data as $evTimeStr => $row) {
             var timeMs = chart.data.times[index];
             var dateStr = chart.data.labels[index];
             
-            // Convert YYYY-MM-DD to MM/DD/YYYY for nrreport
-            var parts = dateStr.split('-');
-            var exactDate = parts[1] + '/' + parts[2] + '/' + parts[0];
-            
-            var url = 'nrreport.html?datefrom=' + exactDate + '&dateto=' + exactDate + '&exactTime=' + timeMs;
+            var url = 'nrreport.html?datefrom=' + dateStr + '&dateto=' + dateStr + '&exactTime=' + timeMs;
             window.open(url, '_blank');
           }
         },

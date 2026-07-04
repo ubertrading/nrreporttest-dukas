@@ -423,10 +423,14 @@ function getCalendar() {
             var historyUrlName = 'nrreport.html?news=' + encodeURIComponent(row.news) + '&datefrom=2000-01-01';
             var nameLink = '<a href="' + historyUrlName + '" target="_blank" style="color: inherit; text-decoration: underline;">' + escapeHtml(row.news) + '</a>';
 
+            var exactDate = dtevent_i.format("YYYY-MM-DD");
+            var historyUrlDate = 'nrreport.html?datefrom=' + exactDate + '&dateto=' + exactDate;
+            var dateLink = '<a href="' + historyUrlDate + '" target="_blank" style="color: inherit; text-decoration: underline;">' + escapeHtml(dtevent) + '</a>';
+
             htmlParts.push(
               '<tr class="' + trClass + '" ' + trStyle + '>' +
               '<td style="white-space: nowrap;">' + idContent + '</td>' +
-              '<td style="white-space: nowrap;">' + escapeHtml(dtevent) + '</td>' +
+              '<td style="white-space: nowrap;">' + dateLink + '</td>' +
               '<td><span title="' + escapeHtml(dttimestamp_hover) + '">' + escapeHtml(dttimestamp) + '</span></td>' +
               '<td style="white-space: nowrap;">' + nameLink + '</td>' +
               '<td>' + escapeHtml(fixNumber(row.prior)) + '</td>' +

@@ -45,17 +45,17 @@ if ($res) {
         }
 
         if ($dev !== null) {
-            $evTime = (int)$row['event_time'];
+            $evTimeStr = date('Y-m-d H:i', $row['event_time'] / 1000);
             $ts = (int)$row['timestamp'];
             
-            if (!isset($data[$evTime])) {
-                $data[$evTime] = [
-                    'time' => $evTime,
+            if (!isset($data[$evTimeStr])) {
+                $data[$evTimeStr] = [
+                    'time' => (int)$row['event_time'],
                     'dev' => round($dev, 5),
                     'timestamp' => $ts
                 ];
             } else {
-                $existingTs = $data[$evTime]['timestamp'];
+                $existingTs = $data[$evTimeStr]['timestamp'];
                 
                 // Determine if this new row has an earlier valid timestamp
                 $isNewEarlier = false;
@@ -66,8 +66,8 @@ if ($res) {
                 }
 
                 if ($isNewEarlier) {
-                    $data[$evTime] = [
-                        'time' => $evTime,
+                    $data[$evTimeStr] = [
+                        'time' => (int)$row['event_time'],
                         'dev' => round($dev, 5),
                         'timestamp' => $ts
                     ];
@@ -84,8 +84,8 @@ $labels = [];
 $deviations = [];
 $colors = [];
 
-foreach ($data as $event_time => $row) {
-    $labels[] = date('Y-m-d', $event_time / 1000);
+foreach ($data as $evTimeStr => $row) {
+    $labels[] = date('Y-m-d', $row['time'] / 1000);
     $deviations[] = $row['dev'];
     $colors[] = $row['dev'] >= 0 ? 'rgba(46, 125, 50, 0.8)' : 'rgba(198, 40, 40, 0.8)';
 }

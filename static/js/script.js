@@ -114,6 +114,7 @@ function getUrlParameter(sParam) {
 var $sharedDropdownContainer = null;
 var activeFormData = null;
 var sharedDropdownInitialized = false;
+var exactTimeFilter = null;
 
 function initSharedDropdown() {
   // Only initialize once — no need to recreate on every data reload
@@ -333,6 +334,9 @@ function getCalendar() {
     'news': news,
     'site': site
   };
+  if (exactTimeFilter) {
+    data['exact_time'] = exactTimeFilter;
+  }
   $.post('nrreport.php', data,
     function (data, textStatus, jqXHR) {
       if (data != null) {
@@ -424,7 +428,8 @@ function getCalendar() {
             var nameLink = '<a href="' + historyUrlName + '" target="_blank" style="color: inherit; text-decoration: underline;">' + escapeHtml(row.news) + '</a>';
 
             var exactDate = dtevent_i.format("YYYY-MM-DD");
-            var historyUrlDate = 'nrreport.html?datefrom=' + exactDate + '&dateto=' + exactDate;
+            var exactTimeMs = dtevent_i.valueOf();
+            var historyUrlDate = 'nrreport.html?datefrom=' + exactDate + '&dateto=' + exactDate + '&exactTime=' + exactTimeMs;
             var dateLink = '<a href="' + historyUrlDate + '" target="_blank" style="color: inherit; text-decoration: underline;">' + escapeHtml(dtevent) + '</a>';
 
             htmlParts.push(
@@ -503,6 +508,10 @@ $(function () {
     if (urlSite) {
       $('#site').val(urlSite);
     }
+    var urlExactTime = getUrlParameter('exactTime');
+    if (urlExactTime) {
+      exactTimeFilter = urlExactTime;
+    }
 
     // Initialize dark theme checkbox (default: on)
     var darkPref = localStorage.getItem('darkTheme');
@@ -516,9 +525,11 @@ $(function () {
     getCalendar();
   });
   $('#datetimepicker1').on('dp.change', function () {
+    exactTimeFilter = null;
     getCalendar();
   });
   $('#datetimepicker2').on('dp.change', function () {
+    exactTimeFilter = null;
     getCalendar();
   });
   $('#site').on('change', function () {

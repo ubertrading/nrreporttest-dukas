@@ -25,6 +25,7 @@ if (isset($_POST["action"])) {
     $newsId = $_POST["newsId"];
     $news = $_POST["news"];
     $site = $_POST["site"];
+    $exact_time = isset($_POST["exact_time"]) ? $_POST["exact_time"] : null;
 
     if (!isset($site) || empty($site)) {
       $site = "NY";
@@ -79,6 +80,9 @@ if (isset($_POST["action"])) {
       $sql .= " WHERE ";
 
       $sql .= "(event_time >= {$datefrom_t} AND event_time <= {$dateto_t})";
+      if (isset($exact_time) && !empty($exact_time)) {
+        $sql .= " AND event_time = {$exact_time} ";
+      }
       if (isset($newsId) && !empty($newsId)) {
         $sql .= " AND (";
         $a = explode(",", $newsId);

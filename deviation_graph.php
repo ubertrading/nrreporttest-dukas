@@ -42,11 +42,13 @@ if ($res) {
         }
 
         if ($dev !== null) {
-            // Group by event_time in PHP to pick just the primary record for that time
-            $data[$row['event_time']] = [
-                'time' => (int)$row['event_time'],
-                'dev' => round($dev, 5)
-            ];
+            // Group by event_time in PHP to pick just the primary (earliest) record for that time
+            if (!isset($data[$row['event_time']])) {
+                $data[$row['event_time']] = [
+                    'time' => (int)$row['event_time'],
+                    'dev' => round($dev, 5)
+                ];
+            }
         }
     }
 }

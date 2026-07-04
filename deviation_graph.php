@@ -153,13 +153,19 @@ foreach ($data as $evTimeStr => $row) {
   <h2><?php echo htmlspecialchars($news_title); ?> - Historical Deviations</h2>
   
   <div style="text-align: center; margin-bottom: 20px;">
+      <label for="fromDate" style="color: var(--font-color);">From Date:</label>
+      <input type="date" id="fromDate" style="margin-right: 15px; padding: 4px; background: transparent; color: var(--font-color); border: 1px solid #555;">
+      
+      <label for="toDate" style="color: var(--font-color);">To Date:</label>
+      <input type="date" id="toDate" style="margin-right: 25px; padding: 4px; background: transparent; color: var(--font-color); border: 1px solid #555;">
+
       <label for="minY" style="color: var(--font-color);">Min Y:</label>
       <input type="number" id="minY" style="width: 80px; margin-right: 15px; padding: 4px; background: transparent; color: var(--font-color); border: 1px solid #555;">
       
       <label for="maxY" style="color: var(--font-color);">Max Y:</label>
       <input type="number" id="maxY" style="width: 80px; margin-right: 15px; padding: 4px; background: transparent; color: var(--font-color); border: 1px solid #555;">
       
-      <button onclick="updateChartScale()" style="padding: 4px 12px; cursor: pointer; background: #333; color: #fff; border: 1px solid #555;">Apply Scale</button>
+      <button onclick="updateChartScale()" style="padding: 4px 12px; cursor: pointer; background: #333; color: #fff; border: 1px solid #555;">Apply Filter</button>
       <button onclick="resetChartScale()" style="padding: 4px 12px; cursor: pointer; margin-left: 5px; background: #333; color: #fff; border: 1px solid #555;">Reset</button>
   </div>
   
@@ -172,19 +178,19 @@ foreach ($data as $evTimeStr => $row) {
     document.documentElement.style.setProperty('--font-color', isDark ? '#ccc' : '#666');
     
     var ctx = document.getElementById('deviationChart').getContext('2d');
-    var labels = <?php echo json_encode(array_values($labels)); ?>;
-    var data = <?php echo json_encode(array_values($deviations)); ?>;
-    var colors = <?php echo json_encode(array_values($colors)); ?>;
+    var origLabels = <?php echo json_encode(array_values($labels)); ?>;
+    var origData = <?php echo json_encode(array_values($deviations)); ?>;
+    var origColors = <?php echo json_encode(array_values($colors)); ?>;
 
     var deviationChart = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: labels,
+        labels: [...origLabels],
         datasets: [{
           label: 'Deviation',
-          data: data,
-          backgroundColor: colors,
-          borderColor: colors.map(c => c.replace('0.8', '1')),
+          data: [...origData],
+          backgroundColor: [...origColors],
+          borderColor: origColors.map(c => c.replace('0.8', '1')),
           borderWidth: 1
         }]
       },
@@ -222,7 +228,10 @@ foreach ($data as $evTimeStr => $row) {
     function updateChartScale() {
         var minVal = document.getElementById('minY').value;
         var maxVal = document.getElementById('maxY').value;
+        var fromDate = document.getElementById('fromDate').value;
+        var toDate = document.getElementById('toDate').value;
         
+        // 1. Update Y-Axis Scale Limits
         if (minVal !== '') {
             deviationChart.options.scales.y.min = parseFloat(minVal);
         } else {
@@ -235,14 +244,50 @@ foreach ($data as $evTimeStr => $row) {
             delete deviationChart.options.scales.y.max;
         }
         
+        // 2. Filter X-Axis Data by Date
+        var filteredLabels = [];
+        var filteredData = [];
+        var filteredColors = [];
+        
+        for (var i = 0; i < origLabels.length; i++) {
+            var rowDate = origLabels[i]; // e.g. "2021-01-08"
+            
+            var keep = true;
+            if (fromDate !== '' && rowDate < fromDate) keep = false;
+            if (toDate !== '' && rowDate > toDate) keep = false;
+            
+            if (keep) {
+                filteredLabels.push(origLabels[i]);
+                filteredData.push(origData[i]);
+                filteredColors.push(origColors[i]);
+            }
+        }
+        
+        deviationChart.data.labels = filteredLabels;
+        deviationChart.data.datasets[0].data = filteredData;
+        deviationChart.data.datasets[0].backgroundColor = filteredColors;
+        deviationChart.data.datasets[0].borderColor = filteredColors.map(c => c.replace('0.8', '1'));
+        
         deviationChart.update();
     }
 
     function resetChartScale() {
+        // Reset inputs
         document.getElementById('minY').value = '';
         document.getElementById('maxY').value = '';
+        document.getElementById('fromDate').value = '';
+        document.getElementById('toDate').value = '';
+        
+        // Reset Y scale
         delete deviationChart.options.scales.y.min;
         delete deviationChart.options.scales.y.max;
+        
+        // Reset data
+        deviationChart.data.labels = [...origLabels];
+        deviationChart.data.datasets[0].data = [...origData];
+        deviationChart.data.datasets[0].backgroundColor = [...origColors];
+        deviationChart.data.datasets[0].borderColor = origColors.map(c => c.replace('0.8', '1'));
+        
         deviationChart.update();
     }
   </script>

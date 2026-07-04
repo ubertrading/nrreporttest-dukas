@@ -1,0 +1,715 @@
+<?php // content="text/plain; charset=utf-8"
+date_default_timezone_set('Europe/Warsaw');
+
+//------------------------------------------------------------------
+// Create some random data for the plot. We use the current time for the
+// first X-position
+//------------------------------------------------------------------
+include 'config.php';
+
+$instrument_slash_map = json_decode(file_get_contents("instrument_slash_map.json"), true);
+
+function debug_to_console($data)
+{
+  $output = $data;
+  if (is_array($output))
+    $output = implode(',', $output);
+
+  echo "<script>console.log('Debug Objects: " . $output . "' );</script>";
+}
+
+function get_data($symbol, $timestamp, $from, $to, $timeframe, $retry = 0)
+{
+  global $instrument_slash_map;
+  debug_to_console("called get_data: " . $timeframe . " for " . $symbol . " at " .
+    $timestamp . " from " . $from->format('m.d.Y H:i:s') . " to " . $to->format('m.d.Y H:i:s'));
+
+  // first call python script to get saved data, if available
+  ob_start();
+  $cmd = "/opt/python/bin/python3 /home/jlippuner/quantflash/download_data.py " . $symbol . " " .
+    $timestamp . " " . $timeframe;
+  debug_to_console($cmd);
+  $out = shell_exec($cmd);
+  $res = json_decode($out, true);
+  if ($res['status'] == 'OK') {
+    debug_to_console("Got cached data");
+    return $res;
+  }
+
+  debug_to_console("Fetching data");
+
+  // else we fetch data
+  if (array_key_exists($symbol, $instrument_slash_map)) {
+    $symbol = $instrument_slash_map[$symbol];
+  }
+
+  // debug_to_console("Now symbol: " . $symbol);
+
+  $ch = curl_init();
+  curl_setopt($ch, CURLOPT_URL, "http://127.0.0.1:5000/hist/");
+  curl_setopt($ch, CURLOPT_POST, 1);
+  curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
+  $payload = json_encode(array(
+    "symbol" => $symbol,
+    "timeFrom" => $from->format('m.d.Y H:i:s'),
+    "timeTo" => $to->format('m.d.Y H:i:s'),
+    "action" => "get",
+    "timeframe" => $timeframe
+  ));
+  debug_to_console("Payload: " . $payload);
+  curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+  $response = curl_exec($ch);
+  debug_to_console("Response " . $response);
+  curl_close($ch);
+  $res = json_decode($response, true);
+
+  if ($res['status'] != 'OK') {
+    if ($retry < 0) {
+      return get_data($symbol, $timestamp, $from, $to, $timeframe, $retry + 1);
+    } else {
+      debug_to_console("ERROR fetching " . $timeframe . " for " . $symbol . " from " .
+        $from->format('m.d.Y H:i:s') . " to " . $to->format('m.d.Y H:i:s') . ":\n");
+      debug_to_console($response);
+    }
+  }
+
+  return $res;
+}
+
+$site = '';
+if (array_key_exists('site', $_GET)) {
+  $site = $_GET['site'];
+}
+
+if (!isset($site) || empty($site)) {
+  $site = "NY";
+}
+
+$tbl_prefix = strtolower($site) . "_";
+$servername = $db_servername;
+$username = $db_username;
+$password = $db_password;
+$database = $db_database;
+
+/*
+$table = $tbl_prefix . $db_table;
+
+$conn = new mysqli($servername, $username, $password, $database);
+
+ $sql .= "SELECT MIN(`timestamp`) as timestamp FROM `{$table}`";
+
+ $sql .= " WHERE news_id=".intval($_GET['id']);
+
+ #print($sql."<br>");
+
+$res = $conn->query($sql);
+
+if($res !== NULL && $res !== false) {
+  $row = $res->fetch_assoc();
+} else {
+  print("ERROR");
+  exit;
+}
+
+#print_r($row);
+
+$timestampInMilliseconds = $row['timestamp'];
+$timestampInSeconds = $timestampInMilliseconds / 1000 -30;
+
+$formattedDateFrom = date("m.d.Y H:i:s", $timestampInSeconds);
+$formattedDateTo = date("m.d.Y H:i:s", $timestampInSeconds+60);
+
+$news = date('Y-m-d H:i:s', $timestampInMilliseconds / 1000);
+*/
+
+$news_title = $_GET['news'] ?? "Missing news title";
+$forecast_avg = $_GET['forecast_avg'] ?? '';
+$forecast = $_GET['forecast'] ?? '';
+$actual = $_GET['actual'] ?? '';
+$deviation = $_GET['deviation'] ?? '';
+$embed = $_GET['embed'] ?? '';
+
+$timezonefxcm = new DateTimeZone('UTC');
+
+// Tworzenie obiektu DateTime z łańcucha znaków reprezentującego datę i godzinę
+$dateTime = DateTime::createFromFormat('Y-m-d H:i:s.u', $_GET['datetime'], $timezonefxcm);
+
+// Formatowanie daty i godziny do formatu d-m-Y H:i:s
+$news = substr($dateTime->format('Y-m-d H:i:s.u'), 0, -3);
+$news_timestamp = $dateTime->format('Uv');
+
+// Obliczanie daty i godziny 30 sekund wcześniej
+$dt_from = DateTime::createFromFormat('Y-m-d H:i:s.u', $_GET['datetime'], $timezonefxcm);
+$dt_from->modify('-60 seconds');
+$time_tick_start = $dt_from->format('Uv');
+
+$dt_to = DateTime::createFromFormat('Y-m-d H:i:s.u', $_GET['datetime'], $timezonefxcm);
+$dt_to->modify('+60 seconds');
+$time_tick_end = $dt_to->format('Uv');
+
+// make x values for scheduled news time and received time
+$tz_nyc = new DateTimeZone('America/New_York');
+
+$scheduled = $_GET['scheduled'] ?? "2000-01-01 00:00:00.000000";
+$dt_sched = DateTime::createFromFormat('Y-m-d H:i:s.u', $scheduled, $timezonefxcm);
+$dt_recv = DateTime::createFromFormat('Y-m-d H:i:s.u', $_GET['datetime'], $timezonefxcm);
+
+$news_sched = substr($dt_sched->format('Y-m-d H:i:s.u'), 0, -3);
+
+$dt_sched->setTimezone($tz_nyc);
+$dt_recv->setTimezone($tz_nyc);
+
+$ts_sched = $dt_sched->format('Uv');
+$ts_recv = $dt_recv->format('Uv');
+
+/*
+print($news);
+print('<br>');
+print($formattedDateFrom);
+print('<br>');
+print($formattedDateTo );
+print('<br>');
+/*exit;
+*/
+
+if (empty($_GET['symbol'])) {
+  $symbol = 'EURUSD';
+} else {
+  $symbol = $_GET['symbol'];
+}
+
+//print("// $news\n");
+
+#echo $formattedDateFrom." ".$formattedDateTo;
+//print("<pre>");
+
+$r = get_data($symbol, $news_timestamp, $dt_from, $dt_to, "t1");
+
+$datax = array();
+$datay1 = array();
+$datay2 = array();
+
+$pt_recv = 0;
+$pt_sched = 0;
+
+if ($r['status'] == 'OK') {
+  $n = 0;
+
+  $ask_pts = '';
+  $bid_pts = '';
+  if (!empty($r['data'])) {
+    $data = $r['data'];
+  }
+
+  if (!empty($data)) {
+    usort($data, function ($a, $b) {
+      return strcmp($a['DateTime'], $b['DateTime']);
+    });
+
+    $timezone = new DateTimeZone('America/New_York');
+
+    foreach ($data as $row) {
+      // $dt = DateTime::createFromFormat('Y-m-d H:i:s.u', $row['DateTime'], $timezonefxcm);
+      // $ts = $dt->format('Uv');
+      // $ask_pts .= '{x:' . $ts . ',y:' . floatval($row['Ask']) . '},';
+      // $bid_pts .= '{x:' . $ts . ',y:' . floatval($row['Bid']) . '},';
+
+      $datetimefxcm = DateTime::createFromFormat('Y-m-d H:i:s.u', $row['DateTime'], $timezonefxcm);
+      $datetimefxcm->setTimezone($timezone);
+      $fxcmtimestamp = substr($datetimefxcm->format('H:i:s.u'), 0, -3);
+      $datax[] = "'" . $fxcmtimestamp . "'";
+      $datay1[] = floatval($row['Bid']);
+      $datay2[] = floatval($row['Ask']);
+
+      //print($row['DateTime'].">".$news." ".($row['DateTime']>$news)."<br>");
+      if ($row['DateTime'] > $news) {
+      } else {
+        $pt_recv = $fxcmtimestamp;
+      }
+      if (($pt_recv == 0) && ($n == 0)) {
+        $pt_recv = $fxcmtimestamp;
+      }
+
+      if ($row['DateTime'] > $news_sched) {
+      } else {
+        $pt_sched = $fxcmtimestamp;
+      }
+      if (($pt_sched == 0) && ($n == 0)) {
+        $pt_sched = $fxcmtimestamp;
+      }
+
+      $n++;
+    }
+  }
+
+} else {
+  print ("ERROR fetching tick data: r['status'] = '" . $r['status']);
+}
+
+//print_r($datax);
+//exit;
+
+?>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>News on time</title>
+
+  <script src="node_modules/jquery/dist/jquery.min.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/luxon@1.26.0"></script>
+  <!--<script src="https://cdn.jsdelivr.net/npm/chart.js@3.0.1/dist/chart.js"></script>-->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.0.0"></script>
+  <script src="https://www.chartjs.org/chartjs-chart-financial/chartjs-chart-financial.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.0.2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.34/moment-timezone-with-data.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+
+  <!-- Select2 CSS -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+
+  <!-- Select2 JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+
+  <script src="static/js/instruments.js"></script>
+
+
+</head>
+
+<body>
+  <script>
+    var isDark = localStorage.getItem('darkTheme') !== 'false';
+    if (isDark) document.body.classList.add('dark-theme');
+    var chartFontColor = isDark ? '#ccc' : '#666';
+    var chartGridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+    var annotationColor = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)';
+  </script>
+  <style>
+    .dark-theme {
+      background: #1a1a2e;
+      color: #eee;
+    }
+
+    .dark-theme .info-bar {
+      background: #16213e !important;
+      color: #ccc;
+    }
+
+    .dark-theme .info-bar h2 {
+      color: #fff;
+    }
+
+    .dark-theme .info-bar .data-vals {
+      color: #ccc;
+    }
+
+    .dark-theme .select2-container--default .select2-selection--single {
+      background-color: #16213e;
+      border-color: #0f3460;
+    }
+
+    .dark-theme .select2-container--default .select2-selection--single .select2-selection__rendered {
+      color: #eee;
+    }
+
+    .dark-theme .select2-container--default .select2-selection--single .select2-selection__arrow b {
+      border-color: #ccc transparent transparent transparent;
+    }
+
+    .dark-theme .select2-dropdown {
+      background-color: #16213e;
+      border-color: #0f3460;
+      color: #eee;
+    }
+
+    .dark-theme .select2-container--default .select2-search--dropdown .select2-search__field {
+      background: #1a1a2e;
+      color: #eee;
+      border-color: #0f3460;
+    }
+
+    .dark-theme .select2-container--default .select2-results__option--highlighted[aria-selected] {
+      background-color: #0f3460;
+    }
+
+    .dark-theme .select2-container--default .select2-results__option {
+      color: #eee;
+    }
+  </style>
+  <?php if ($embed === '1'): ?>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        zoom: 0.78;
+        overflow: hidden;
+      }
+    </style>
+  <?php endif; ?>
+  <?php if ($embed !== '1'): ?>
+    <div>
+      <form action="graph.php" method="GET" target="_self">
+        <input type="hidden" name="id" value="<?= $_GET['id'] ?>">
+        <input type="hidden" name="datetime" value="<?= $_GET['datetime'] ?>">
+        <input type="hidden" name="scheduled" value="<?= $scheduled ?>">
+        <input type="hidden" name="news" value="<?= $news_title ?>">
+        <input type="hidden" name="forecast_avg" value="<?= htmlspecialchars($forecast_avg) ?>">
+        <input type="hidden" name="forecast" value="<?= htmlspecialchars($forecast) ?>">
+        <input type="hidden" name="actual" value="<?= htmlspecialchars($actual) ?>">
+        <input type="hidden" name="deviation" value="<?= htmlspecialchars($deviation) ?>">
+        <select id="symbol" name="symbol" onChange="this.form.submit(); this.selectedIndex = 0;"
+          class="form-control select2" value="<?= $_GET['symbol'] ?>"></select>
+      </form>
+    </div>
+    <script>
+      addSymbols('symbol');
+      $(document).ready(function () {
+        $('.select2').select2({
+
+        });
+      });
+    </script>
+    <div class="info-bar"
+      style="margin: 10px 0; padding: 10px 15px; background: #f0f0f0; border-radius: 6px; font-family: sans-serif;">
+      <h2 style="margin: 0 0 6px 0;"><span style="display:inline-block; background:#1565c0; color:#fff; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:4px; margin-right:8px; vertical-align:middle;">FXCM</span><?php echo htmlspecialchars($news_title); ?></h2>
+      <div class="data-vals" style="display: flex; gap: 25px; font-size: 14px;">
+        <?php if ($forecast_avg !== ''): ?>
+          <span><strong>Avg. F'cast:</strong> <?= htmlspecialchars($forecast_avg) ?></span>
+        <?php endif; ?>
+        <?php if ($forecast !== ''): ?>
+          <span><strong>Forecast:</strong> <?= htmlspecialchars($forecast) ?></span>
+        <?php endif; ?>
+        <?php if ($actual !== ''): ?>
+          <span><strong>Actual:</strong> <?= htmlspecialchars($actual) ?></span>
+        <?php endif; ?>
+        <?php if ($deviation !== ''): ?>
+          <span style="color: <?= floatval($deviation) >= 0 ? '#2e7d32' : '#c62828' ?>; font-weight: bold;">
+            <strong>Deviation:</strong> <?= htmlspecialchars($deviation) ?>
+          </span>
+        <?php endif; ?>
+      </div>
+    </div>
+  <?php endif; ?>
+
+  <canvas id="linear" width="400" height="200"></canvas>
+  <!-- <canvas id="linear2" width="400" height="200"></canvas> -->
+  <canvas id="candles" width="400" height="200"></canvas>
+
+  <script type="text/javascript">
+    var ctx = document.getElementById('linear').getContext('2d');
+    var myChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [<?php echo join(',', $datax); ?>],
+        datasets: [
+          {
+            label: 'Ask',
+            data: [<?php echo join(',', $datay2); ?>],
+            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+          },
+          {
+            label: 'Bid',
+            data: [<?php echo join(',', $datay1); ?>],
+            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            borderColor: 'rgba(255, 99, 132, 1)',
+            borderWidth: 1
+          }]
+      },
+      options: {
+
+        scales: {
+          x: {
+            ticks: {
+              maxRotation: 45,
+              font: { size: 9 },
+              color: chartFontColor
+            },
+            grid: { color: chartGridColor }
+          },
+          y: {
+            beginAtZero: false,
+            ticks: { color: chartFontColor },
+            grid: { color: chartGridColor }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          annotation: {
+            annotations: {
+              verticalLine: {
+                type: 'line',
+                xMin: '<?php echo $pt_recv ?>',
+                xMax: '<?php echo $pt_recv ?>',
+                borderColor: annotationColor,
+                borderWidth: 1,
+                borderDash: [4, 4],
+              },
+              // verticalLine2: {
+              //   type: 'line',
+              //   xMin: '<?php echo $pt_sched ?>',
+              //   xMax: '<?php echo $pt_sched ?>',
+              //   borderColor: 'rgba(0, 0, 255, 1)',
+              //   borderWidth: 2,
+              //   label: {
+              //     backgroundColor: 'blue',
+              //     content: 'Event',
+              //     enabled: true,
+              //     position: 'end'
+              //   }
+              // }
+            }
+          },
+          zoom: {
+            pan: {
+              enabled: false,
+            },
+            zoom: {
+              wheel: {
+                enabled: false,
+              },
+              drag: {
+                enabled: false,
+              },
+              pinch: {
+                enabled: true,
+              },
+              mode: 'xy',  // lub 'x' lub 'y'
+            }
+          }
+        }
+      }
+    });
+  </script>
+
+  <!--
+  <script type="text/javascript">
+    var ctx = document.getElementById('linear2').getContext('2d');
+    var myChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        datasets: [
+          {
+            label: 'Ask',
+            data: [<?php echo $ask_pts; ?>],
+            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+          },
+          {
+            label: 'Bid',
+            data: [<?php echo $bid_pts; ?>],
+            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            borderColor: 'rgba(255, 99, 132, 1)',
+            borderWidth: 1
+          }]
+      },
+      options: {
+        scales: {
+          x: {
+            type: 'time',
+            min: <?php echo $time_tick_start; ?>,
+            max: <?php echo $time_tick_end; ?>,
+
+            parser: timestamp => {
+              console.log('Parser called with', timestamp);
+              // reszta Twojego kodu parsera
+            },
+            time: {
+              tooltipFormat: 'yyyy-MM-dd HH:mm:ss.u',
+              unit: 'second',
+              displayFormats: {
+                second: 'yy-MM-dd HH:mm:ss'
+              }
+            },
+            ticks: {
+              source: 'auto'
+            }
+          },
+          y: {
+            beginAtZero: false
+          }
+        },
+        plugins: {
+          annotation: {
+            annotations: {
+              verticalLine2: {
+                type: 'line',
+                xMin: <?php echo $ts_sched ?>,
+                xMax: <?php echo $ts_sched ?>,
+                borderColor: 'rgba(0, 0, 255, 1)',
+                borderWidth: 2,
+                label: {
+                  backgroundColor: 'blue',
+                  content: 'Event',
+                  enabled: true,
+                  position: 'end'
+                }
+              },
+              verticalLine: {
+                type: 'line',
+                xMin: <?php echo $ts_recv ?>,
+                xMax: <?php echo $ts_recv ?>,
+                borderColor: 'rgba(255, 0, 0, 1)',
+                borderWidth: 2,
+                label: {
+                  backgroundColor: 'red',
+                  content: 'Received',
+                  enabled: true,
+                  position: 'start'
+                }
+              },
+            }
+          },
+          // zoom: {
+          //   pan: {
+          //     enabled: true,
+          //     mode: 'xy',  // lub 'x' lub 'y'
+          //     threshold: 10,  // opcjonalnie, minimalna liczba pikseli, jaką trzeba przesunąć, aby rozpocząć przesuwanie
+          //   },
+          //   zoom: {
+          //     wheel: {
+          //       enabled: true,
+          //     },
+          //     drag: {
+          //       enabled: false,
+          //     },
+          //     pinch: {
+          //       enabled: true,
+          //     },
+          //     mode: 'xy',  // lub 'x' lub 'y'
+          //   }
+          // }
+        }
+      }
+    });
+  </script>
+  -->
+  <?php
+
+
+  $dt_from = DateTime::createFromFormat('Y-m-d H:i:s.u', $_GET['datetime'], $timezonefxcm);
+  $dt_from->modify('-10 minute');
+  $dt_to = DateTime::createFromFormat('Y-m-d H:i:s.u', $_GET['datetime'], $timezonefxcm);
+  $dt_to->modify('+60 minute');  // 30 sekund wstecz + 60 sekund do przodu = 30 sekund do przodu
+  
+  $r = get_data($symbol, $news_timestamp, $dt_from, $dt_to, "m1");
+
+  if ($r['status'] == 'OK') {
+    $candles = '';
+    //$point='';
+    $n = 0;
+
+    if (!empty($r['data'])) {
+      $data = $r['data'];
+
+      usort($data, function ($a, $b) {
+        return strcmp($a['DateTime'], $b['DateTime']);
+      });
+
+      $timezone = new DateTimeZone('America/New_York');
+
+      $n = 0;
+      foreach ($data as $row) {
+        $datetimefxcm = DateTime::createFromFormat('Y-m-d H:i:s.u', $row['DateTime'], $timezonefxcm);
+        $datetimefxcm->setTimezone($timezone);
+        $fxcmtimestamp = $datetimefxcm->getTimestamp() * 1000; //format('Y-m-d H:i:s');
+        $datax[] = "'" . $fxcmtimestamp . "'";
+        $candles .= '{' . 'x:' . $fxcmtimestamp . ', o:' . $row['BidOpen'] . ', h:' . $row['BidHigh'] . ',l:' . $row['BidLow'] . ',c:' . $row['BidClose'] . '},';
+        //print($row['DateTime'].">".$news." ".($row['DateTime']>$news)."<br>");
+        $n++;
+      }
+
+      ?>
+      <script type="text/javascript">
+        const data = {
+          datasets: [{
+            label: 'M1',
+            data: [
+              <?php echo $candles; ?>
+            ],
+          }]
+        };
+
+        const config = {
+          type: 'candlestick',
+          data: data,
+          options: {
+
+            scales: {
+              x: {
+                type: 'time',
+                parser: timestamp => {
+                  console.log('Parser called with', timestamp);
+                  // reszta Twojego kodu parsera
+                },
+                time: {
+                  tooltipFormat: 'yyyy-MM-dd HH:mm',
+                  unit: 'minute',
+                  displayFormats: {
+                    day: 'yy-MM-dd HH:mm'
+                  }
+                },
+                ticks: {
+                  source: 'data',
+                  color: chartFontColor
+                },
+                grid: { color: chartGridColor }
+              },
+              y: {
+                ticks: { color: chartFontColor },
+                grid: { color: chartGridColor }
+              }
+            },
+            plugins: {
+              legend: { display: false },
+              annotation: {
+                annotations: {
+                  verticalLine1: {
+                    type: 'line',
+                    xMin: <?php echo $ts_recv ?>,
+                    xMax: <?php echo $ts_recv ?>,
+                    borderColor: annotationColor,
+                    borderWidth: 1,
+                    borderDash: [4, 4],
+                  },
+                  // verticalLine: {
+                  //   type: 'line',
+                  //   xMin: <?php echo $ts_sched ?>,
+                  //   xMax: <?php echo $ts_sched ?>,
+                  //   borderColor: 'rgba(0, 0, 0, 0)',
+                  //   borderWidth: 1,
+                  //   label: {
+                  //     backgroundColor: 'blue',
+                  //     content: 'Event',
+                  //     enabled: true,
+                  //     position: 'end'
+                  //   }
+                  // }
+                }
+              },
+            }
+          }
+        };
+
+        const candlestickChart = new Chart(
+          document.getElementById('candles'),
+          config
+        );
+      </script>
+      <?php
+    }
+  } else {
+    print ("ERROR fetching minute data: r['status'] = '" . $r['status'] . "'");
+  }
+  ?>
+</body>
+
+</html>

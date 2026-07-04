@@ -1,0 +1,129 @@
+#!/bin/bash
+
+
+mailto="errno0@gmail.com,martin3@gmail.com"
+#mailto="errno0@gmail.com"
+u="--login-path=local"
+#p="-p 123123"
+p=""
+db=newsreader
+table=ny_results_log
+h=""
+
+lastid=260000
+outf=/tmp/$(date +%s).out
+#outf=/tmp/out
+
+[ -e ".lastid" ] && lastid=`cat .lastid`
+
+MYSQLC="mysql $u $p $h -N $db "
+MYSQLCV="mysql $u $p $h --vertical $db "
+
+echo "select * from $table where id > $lastid and (source=1 or source=7) order by id" | $MYSQLCV > $outf
+
+
+id=''
+timestamp=''
+newsid=''
+news=''
+event_time=''
+value=''
+source=''
+
+reset_values() {
+	id=''
+	timestamp=''
+	newsid=''
+	news=''
+	event_time=''
+	value=''
+	source=''
+}
+
+format_event_time()
+{
+	t=$(( $1 / 1000 ))
+	TZ=America/New_York date +"%Y-%m-%d %H:%M" -d @$t
+}
+checkMissing() {
+	[ -z "$id" ] && return
+
+	local other=1
+	local ori="AF-U"
+	local missing="AF-T"
+	if [ "$source" = "1" ] ;then
+		other=7
+		ori="AF-T"
+		missing="AF-U"
+	fi
+
+	c=$(echo "select count(id) as c from $table where news_id=$news_id and event_time=$event_time and source=$other" | $MYSQLC)
+	
+	if [ -z "$c" ] || [ "$c" = "0" ]; then
+		etime=`format_event_time $event_time`
+		echo "<tr><td>$news_id</td><td>$etime</td><td>$news</td><td>$value</td><td>$ori</td><td><b>$missing</b></td></tr>"
+		return 1;
+	fi
+
+	return 0
+}
+
+
+missing_str=""
+while read l; do
+	if echo "$l" | egrep "^\*\*\*" > /dev/null; then 
+		
+		missing_str=${missing_str}`checkMissing`
+		reset_values
+		continue
+	fi
+
+	if echo "$l" | grep -w 'id:' > /dev/null ; then
+		id=$(echo `echo $l | cut -d':' -f 2`)
+	fi
+	if echo "$l" | grep -w 'timestamp:' > /dev/null ; then
+		timestamp=$(echo `echo $l | cut -d':' -f 2`)
+	fi
+	if echo "$l" | grep -w 'news_id:' > /dev/null ; then
+		news_id=$(echo `echo $l | cut -d':' -f 2`)
+	fi
+	if echo "$l" | grep -w 'news:' > /dev/null ; then
+		news=$(echo `echo $l | cut -d':' -f 2`)
+	fi
+	if echo "$l" | grep -w 'event_time:' > /dev/null ; then
+		event_time=$(echo `echo $l | cut -d':' -f 2`)
+	fi
+	if echo "$l" | grep -w 'value:' > /dev/null ; then
+		value=$(echo `echo $l | cut -d':' -f 2`)
+	fi
+	if echo "$l" | grep -w 'source:' > /dev/null ; then
+		source=$(echo `echo $l | cut -d':' -f 2`)
+	fi
+
+done < $outf
+
+if [ -n "$missing_str" ]; then
+	# email missing
+	dt=$(date +"%Y-%m-%d %H:%M:%S")
+	cat << EOF | /usr/sbin/sendmail -t
+Subject: Missed AlphaFlash Results $dt
+From: NewsTrade.Alerts <newstrade.alerts2@gmail.com>
+To: $mailto
+Content-type: text/html
+
+<b>Missed AlphaFlash Results $dt</b>
+<br/>
+<br/>
+<table border="1">
+<tr><th>Id</ht><th>DateTime</th><th>News</th><th>Actual</th><th>Source</th><th>Missing</th></tr>
+$missing_str
+</table>
+
+EOF
+fi
+if [ -n $id ] && [ $id > 0 ] ;then
+	echo $id > .lastid
+fi
+
+rm $outf
+

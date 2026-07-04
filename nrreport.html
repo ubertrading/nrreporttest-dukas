@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Economic Events</title>
+  <script src="https://unpkg.com/@popperjs/core@2/dist/umd/popper.min.js"></script>
+  <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="node_modules/pc-bootstrap4-datetimepicker/build/css/bootstrap-datetimepicker.min.css" />
+  <link rel="stylesheet" href="node_modules/font-awesome/css/font-awesome.min.css" />
+  <link rel="stylesheet" href="static/css/style.css?v=4" />
+
+  <script src="node_modules/jquery/dist/jquery.min.js"></script>
+  <script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+  <script src="node_modules/moment/min/moment.min.js"></script>
+  <script src="node_modules/moment-timezone/moment-timezone.js"></script>
+
+  <script src="node_modules/pc-bootstrap4-datetimepicker/build/js/bootstrap-datetimepicker.min.js"></script>
+
+  <script src="static/js/instruments.js?v=2"></script>
+
+  <!-- Select2 CSS -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+
+  <!-- Select2 JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+
+  <style>
+    .header {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      background-color: #333;
+      color: white;
+      padding: 10px 0;
+      z-index: 1000;
+    }
+
+    .header input,
+    .header select {
+      margin: 5px;
+    }
+
+    .table-container {
+      margin-top: 120px;
+      /* Adjust this margin to match the height of the header */
+      max-height: calc(100vh - 120px);
+      /* Adjust this margin to match the height of the header */
+      overflow-y: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+
+    th {
+      background-color: #333;
+      color: white;
+      position: sticky;
+      top: 0;
+      z-index: 500;
+    }
+
+    .currency-list {
+      position: absolute;
+      z-index: 2000;
+      display: none;
+    }
+
+    /* Select2 dark theme on landing page (only when dark) */
+    body:not(.light-theme) .select2-container--default .select2-selection--single {
+      background-color: #222;
+      border-color: #555;
+      color: #eee;
+    }
+
+    body:not(.light-theme) .select2-container--default .select2-selection--single .select2-selection__rendered {
+      color: #eee;
+    }
+
+    body:not(.light-theme) .select2-container--default .select2-selection--single .select2-selection__arrow b {
+      border-color: #ccc transparent transparent transparent;
+    }
+
+    body:not(.light-theme) .select2-dropdown {
+      background-color: #222;
+      border-color: #555;
+      color: #eee;
+    }
+
+    body:not(.light-theme) .select2-container--default .select2-search--dropdown .select2-search__field {
+      background: #333;
+      color: #eee;
+      border-color: #555;
+    }
+
+    body:not(.light-theme) .select2-container--default .select2-results__option--highlighted[aria-selected] {
+      background-color: #0f3460;
+    }
+
+    body:not(.light-theme) .select2-container--default .select2-results__option {
+      color: #eee;
+    }
+
+    /* Light theme overrides */
+    .light-theme.bgcolor {
+      background-color: #f5f5f5 !important;
+      color: #333 !important;
+    }
+
+    .light-theme .bgcolor2 {
+      background-color: #fff !important;
+      color: #333 !important;
+    }
+
+    .light-theme h2 {
+      color: #222;
+    }
+
+    .light-theme label {
+      color: #333 !important;
+    }
+
+    .light-theme th {
+      background-color: #e0e0e0 !important;
+      color: #333 !important;
+    }
+
+    .light-theme td {
+      border-color: #ccc;
+      color: #333;
+    }
+
+    .light-theme #reload {
+      color: #333 !important;
+    }
+
+    .light-theme .text-warning {
+      color: #b8860b !important;
+    }
+
+    .light-theme .btn-outline-light {
+      color: #333 !important;
+      border-color: #999 !important;
+    }
+
+    .light-theme .btn-outline-light:hover {
+      background-color: #333 !important;
+      color: #fff !important;
+    }
+  </style>
+
+</head>
+
+<body class="bgcolor">
+  <script>
+    // Apply theme from localStorage (default: dark = checked)
+    var isDark = localStorage.getItem('darkTheme') !== 'false';
+    if (!isDark) document.body.classList.add('light-theme');
+  </script>
+
+  <div class="container-fluid">
+    <h2>Economic Events</h2>
+    <div class="form-group">
+      <div class='input-group d-flex flex-row'>
+        <label class="mt-1 pr-2" for="site">Site:</label>
+        <select class="form-control-sm bgcolor2" name="site" id='site'>
+          <option value="NY" selected>NY</option>
+          <option value="LD">LD</option>
+        </select>
+        <label class="mt-1 pr-2" for="datetimepicker1">Date:</label>
+        <input type='text' class="form-control-sm datetimepicker bgcolor2" id='datetimepicker1' />
+        <label class="ml-1 mt-1 pr-2" for="datetimepicker2">To:</label>
+        <input type='text' class="form-control-sm datetimepicker bgcolor2" id='datetimepicker2' />
+        <label class="ml-1 mt-1 pr-2" for="newsId">ID:</label>
+        <input type='text' class="form-control-sm bgcolor2" id="newsId" />
+        <label class="ml-1 mt-1 pr-2" for="news">Name:</label>
+        <input type='text' class="form-control-sm bgcolor2" id="news" />
+        <span class="ml-1 mt-1">
+          <a href='#' id="reload" class="text-white">
+            <i class="fa fa-spinner">&nbsp;</i>
+          </a>
+        </span>
+        <span class="ml-3" style="display:inline-flex; align-items:center;">
+          <label class="text-warning"
+            style="cursor:pointer; user-select:none; font-size:14px; margin:0; font-weight:bold; margin-right: 15px;">
+            <input type="checkbox" id="expandAll" style="margin-right:5px; transform:scale(1.2);"
+              onchange="toggleAllGroups(this.checked)">
+             Expand All
+          </label>
+          <label class="text-warning"
+            style="cursor:pointer; user-select:none; font-size:14px; margin:0; font-weight:bold;">
+            <input type="checkbox" id="darkTheme" style="margin-right:5px; transform:scale(1.2);"
+              onchange="localStorage.setItem('darkTheme', this.checked); document.body.classList.toggle('light-theme', !this.checked);">
+            &#x1F319; Dark Theme
+          </label>
+        </span>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="container-fluid">
+
+    <table class="table table-bordered table-triped table-condensed" id="calendar">
+      <thead>
+        <tr>
+          <th class="col-id">Id</th>
+          <th class="col-datetime">DateTime</th>
+          <th class="col-timestamp">Timestamp</th>
+          <th class="col-news">News</th>
+          <th class="col-prior">Prior</th>
+          <th class="col-forecast">Avg. F'cast</th>
+          <th class="col-forecast">Forecast</th>
+          <th class="col-actual">Actual</th>
+          <th class="col-deviation">Deviation</th>
+          <th class="col-source">Source</th>
+          <th class="col-graph"></th>
+
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+    <script src="static/js/script.js?v=15"></script>
+  </div>
+
+
+</body>
+
+</html>

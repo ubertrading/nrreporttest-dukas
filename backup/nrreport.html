@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NR Reports</title>
+  <script src="https://unpkg.com/@popperjs/core@2/dist/umd/popper.min.js"></script>
+  <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="node_modules/pc-bootstrap4-datetimepicker/build/css/bootstrap-datetimepicker.min.css" />
+  <link rel="stylesheet" href="node_modules/font-awesome/css/font-awesome.min.css" />
+  <link rel="stylesheet" href="static/css/style.css?v=3" />
+
+  <script src="node_modules/jquery/dist/jquery.min.js"></script>
+  <script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+  <script src="node_modules/moment/min/moment.min.js"></script>
+  <script src="node_modules/moment-timezone/moment-timezone.js"></script>
+
+  <script src="node_modules/pc-bootstrap4-datetimepicker/build/js/bootstrap-datetimepicker.min.js"></script>
+
+  <script src="static/js/instruments.js?v=2"></script>
+
+  <!-- Select2 CSS -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+
+  <!-- Select2 JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+
+  <style>
+    .header {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      background-color: #333;
+      color: white;
+      padding: 10px 0;
+      z-index: 1000;
+    }
+
+    .header input,
+    .header select {
+      margin: 5px;
+    }
+
+    .table-container {
+      margin-top: 120px;
+      /* Adjust this margin to match the height of the header */
+      max-height: calc(100vh - 120px);
+      /* Adjust this margin to match the height of the header */
+      overflow-y: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+
+    th {
+      background-color: #333;
+      color: white;
+      position: sticky;
+      top: 0;
+      z-index: 500;
+    }
+
+    .currency-list {
+      position: absolute;
+      z-index: 1000;
+      display: none;
+    }
+  </style>
+
+</head>
+
+<body class="bgcolor">
+
+  <div class="container">
+    <h2>NewsReader Reports</h2>
+    <div class="form-group">
+      <div class='input-group d-flex flex-row'>
+        <label class="mt-1 pr-2" for="site">Site:</label>
+        <select class="form-control-sm bgcolor2" name="site" id='site'>
+          <option value="NY" selected>NY</option>
+          <option value="LD">LD</option>
+        </select>
+        <label class="mt-1 pr-2" for="datetimepicker1">Date:</label>
+        <input type='text' class="form-control-sm datetimepicker bgcolor2" id='datetimepicker1' />
+        <label class="ml-1 mt-1 pr-2" for="datetimepicker2">To:</label>
+        <input type='text' class="form-control-sm datetimepicker bgcolor2" id='datetimepicker2' />
+        <label class="ml-1 mt-1 pr-2" for="newsId">ID:</label>
+        <input type='text' class="form-control-sm bgcolor2" id="newsId" />
+        <label class="ml-1 mt-1 pr-2" for="news">Name:</label>
+        <input type='text' class="form-control-sm bgcolor2" id="news" />
+        <span class="ml-1 mt-1">
+          <a href='#' id="reload" class="text-white">
+            <i class="fa fa-spinner">&nbsp;</i>
+          </a>
+        </span>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="container">
+
+    <table class="table table-bordered table-triped table-condensed" id="calendar">
+      <thead>
+        <tr>
+          <th class="col-id">Id</th>
+          <th class="col-datetime">DateTime</th>
+          <th class="col-timestamp">Timestamp</th>
+          <th class="col-news">News</th>
+          <th class="col-prior">Prior</th>
+          <th class="col-forecast">Avg. F'cast</th>
+          <th class="col-forecast">Forecast</th>
+          <th class="col-actual">Actual</th>
+          <th class="col-deviation">Deviation</th>
+          <th class="col-source">Source</th>
+          <th class="col-graph"></th>
+
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+    <script src="static/js/script.js?v=12"></script>
+  </div>
+
+
+</body>
+
+</html>

@@ -1,0 +1,57 @@
+
+.bgcolor {
+    background-color: #333;
+    color: #ccc;
+}
+
+.bgcolor2 {
+    background-color: #bbb;
+}
+
+.dropdown-menu {
+    background-color: #bbb;
+
+}
+
+.col-id {
+    width: 8%;
+}
+
+.col-datetime{
+    width: 10%;
+}
+
+.col-timestamp{
+    width: 10%;
+}
+
+.col-news{
+}
+
+.col-actual{
+    width: 8%;
+}
+
+.col-prior {
+    width: 8%;
+}
+
+.col-forecast {
+    width: 8%;
+}
+
+.col-deviation{
+    width: 8%;
+}
+
+.table th, 
+.table td {
+    padding: .2em;
+}
+
+
+.col-graph select{
+    width: auto; /* Adjust width as needed */
+    max-width: 300px; /* You can increase or decrease this value */
+    white-space: nowrap;
+}

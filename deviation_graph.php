@@ -100,11 +100,13 @@ if (isset($_GET['debug'])) {
 $labels = [];
 $deviations = [];
 $colors = [];
+$times = [];
 
 foreach ($data as $evTimeStr => $row) {
     $labels[] = date('Y-m-d', $row['time'] / 1000);
     $deviations[] = $row['dev'];
     $colors[] = $row['dev'] >= 0 ? 'rgba(46, 125, 50, 0.8)' : 'rgba(198, 40, 40, 0.8)';
+    $times[] = $row['time'];
 }
 
 ?>
@@ -181,11 +183,13 @@ foreach ($data as $evTimeStr => $row) {
     var origLabels = <?php echo json_encode(array_values($labels)); ?>;
     var origData = <?php echo json_encode(array_values($deviations)); ?>;
     var origColors = <?php echo json_encode(array_values($colors)); ?>;
+    var origTimes = <?php echo json_encode(array_values($times)); ?>;
 
     var deviationChart = new Chart(ctx, {
       type: 'bar',
       data: {
         labels: [...origLabels],
+        times: [...origTimes],
         datasets: [{
           label: 'Deviation',
           data: [...origData],
@@ -197,6 +201,20 @@ foreach ($data as $evTimeStr => $row) {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        onClick: (e, elements, chart) => {
+          if (elements.length > 0) {
+            var index = elements[0].index;
+            var timeMs = chart.data.times[index];
+            var dateStr = chart.data.labels[index];
+            
+            // Convert YYYY-MM-DD to MM/DD/YYYY for nrreport
+            var parts = dateStr.split('-');
+            var exactDate = parts[1] + '/' + parts[2] + '/' + parts[0];
+            
+            var url = 'nrreport.html?datefrom=' + exactDate + '&dateto=' + exactDate + '&exactTime=' + timeMs;
+            window.open(url, '_blank');
+          }
+        },
         scales: {
           x: {
             ticks: { color: chartFontColor, maxRotation: 45 },
@@ -248,6 +266,7 @@ foreach ($data as $evTimeStr => $row) {
         var filteredLabels = [];
         var filteredData = [];
         var filteredColors = [];
+        var filteredTimes = [];
         
         for (var i = 0; i < origLabels.length; i++) {
             var rowDate = origLabels[i]; // e.g. "2021-01-08"
@@ -260,10 +279,12 @@ foreach ($data as $evTimeStr => $row) {
                 filteredLabels.push(origLabels[i]);
                 filteredData.push(origData[i]);
                 filteredColors.push(origColors[i]);
+                filteredTimes.push(origTimes[i]);
             }
         }
         
         deviationChart.data.labels = filteredLabels;
+        deviationChart.data.times = filteredTimes;
         deviationChart.data.datasets[0].data = filteredData;
         deviationChart.data.datasets[0].backgroundColor = filteredColors;
         deviationChart.data.datasets[0].borderColor = filteredColors.map(c => c.replace('0.8', '1'));
@@ -284,6 +305,7 @@ foreach ($data as $evTimeStr => $row) {
         
         // Reset data
         deviationChart.data.labels = [...origLabels];
+        deviationChart.data.times = [...origTimes];
         deviationChart.data.datasets[0].data = [...origData];
         deviationChart.data.datasets[0].backgroundColor = [...origColors];
         deviationChart.data.datasets[0].borderColor = origColors.map(c => c.replace('0.8', '1'));

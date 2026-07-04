@@ -1,4 +1,7 @@
 <?php
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
 include 'config.php';
 
 $newsId = isset($_GET['newsId']) ? intval($_GET['newsId']) : 0;
@@ -42,12 +45,33 @@ if ($res) {
         }
 
         if ($dev !== null) {
-            // Group by event_time in PHP to pick just the primary (earliest) record for that time
-            if (!isset($data[$row['event_time']])) {
-                $data[$row['event_time']] = [
-                    'time' => (int)$row['event_time'],
-                    'dev' => round($dev, 5)
+            $evTime = (int)$row['event_time'];
+            $ts = (int)$row['timestamp'];
+            
+            if (!isset($data[$evTime])) {
+                $data[$evTime] = [
+                    'time' => $evTime,
+                    'dev' => round($dev, 5),
+                    'timestamp' => $ts
                 ];
+            } else {
+                $existingTs = $data[$evTime]['timestamp'];
+                
+                // Determine if this new row has an earlier valid timestamp
+                $isNewEarlier = false;
+                if ($existingTs == 0 && $ts != 0) {
+                    $isNewEarlier = true;
+                } else if ($ts != 0 && $ts < $existingTs) {
+                    $isNewEarlier = true;
+                }
+
+                if ($isNewEarlier) {
+                    $data[$evTime] = [
+                        'time' => $evTime,
+                        'dev' => round($dev, 5),
+                        'timestamp' => $ts
+                    ];
+                }
             }
         }
     }

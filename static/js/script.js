@@ -441,7 +441,7 @@ function getCalendar() {
             var historyUrlDate = 'nrreport.html?datefrom=' + exactDate + '&dateto=' + exactDate + '&exactTime=' + exactTimeMs;
             var dateLink = '<a href="' + historyUrlDate + '" target="_blank" style="color: inherit; text-decoration: none;">' + escapeHtml(dtevent) + '</a>';
 
-            var devLink = dev !== "" ? '<a href="deviation_graph.php?newsId=' + encodeURIComponent(row.news_id) + '&news=' + encodeURIComponent(row.news) + '" target="_blank" style="color: inherit; text-decoration: none;">' + escapeHtml(dev) + '</a>' : '';
+            var devLink = dev !== "" ? '<a href="deviation_graph.php?newsId=' + encodeURIComponent(row.news_id) + '&news=' + encodeURIComponent(row.news) + '&v=' + Date.now() + '" target="_blank" style="color: inherit; text-decoration: none;">' + escapeHtml(dev) + '</a>' : '';
 
             htmlParts.push(
               '<tr class="' + trClass + '" ' + trStyle + '>' +

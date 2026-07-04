@@ -421,16 +421,16 @@ function getCalendar() {
             var trStyle = isFirstInGroup ? '' : 'style="display:none;"';
 
             var historyUrlId = 'nrreport.html?newsId=' + encodeURIComponent(row.news_id) + '&datefrom=2000-01-01';
-            var idLink = '<a href="' + historyUrlId + '" target="_blank" style="color: inherit; text-decoration: underline;">' + escapeHtml(row.news_id) + '</a>';
+            var idLink = '<a href="' + historyUrlId + '" target="_blank" style="color: inherit; text-decoration: none;">' + escapeHtml(row.news_id) + '</a>';
             var idContent = '<div class="d-flex align-items-center flex-nowrap">' + toggleBtn + '<span>' + idLink + '</span></div>';
 
             var historyUrlName = 'nrreport.html?news=' + encodeURIComponent(row.news) + '&datefrom=2000-01-01';
-            var nameLink = '<a href="' + historyUrlName + '" target="_blank" style="color: inherit; text-decoration: underline;">' + escapeHtml(row.news) + '</a>';
+            var nameLink = '<a href="' + historyUrlName + '" target="_blank" style="color: inherit; text-decoration: none;">' + escapeHtml(row.news) + '</a>';
 
             var exactDate = dtevent_i.format("YYYY-MM-DD");
             var exactTimeMs = dtevent_i.valueOf();
             var historyUrlDate = 'nrreport.html?datefrom=' + exactDate + '&dateto=' + exactDate + '&exactTime=' + exactTimeMs;
-            var dateLink = '<a href="' + historyUrlDate + '" target="_blank" style="color: inherit; text-decoration: underline;">' + escapeHtml(dtevent) + '</a>';
+            var dateLink = '<a href="' + historyUrlDate + '" target="_blank" style="color: inherit; text-decoration: none;">' + escapeHtml(dtevent) + '</a>';
 
             htmlParts.push(
               '<tr class="' + trClass + '" ' + trStyle + '>' +

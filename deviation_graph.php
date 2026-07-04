@@ -32,9 +32,11 @@ $sql = "SELECT event_time, MIN(`timestamp`) as timestamp, value, forecast, forec
 
 $res = $conn->query($sql);
 $data = [];
+$raw_rows = [];
 
 if ($res) {
     while ($row = $res->fetch_assoc()) {
+        $raw_rows[] = $row;
         $val = floatval($row['value']);
         
         $dev = null;
@@ -78,6 +80,15 @@ if ($res) {
 }
 
 $conn->close();
+
+if (isset($_GET['debug'])) {
+    header('Content-Type: application/json');
+    echo json_encode([
+        'raw_rows' => $raw_rows,
+        'processed_data' => $data
+    ]);
+    exit;
+}
 
 // Prepare arrays for Chart.js
 $labels = [];

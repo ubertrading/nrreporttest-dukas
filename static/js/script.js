@@ -347,7 +347,7 @@ function getCalendar() {
           for (var i in rows) {
             var r = rows[i];
             var dtevent_i_temp = moment(parseInt(r['event_time']));
-            var dtevent_temp = dtevent_i_temp.tz('America/New_York').format("MM/DD HH:mm");
+            var dtevent_temp = dtevent_i_temp.tz('America/New_York').format("MM/DD/YY HH:mm");
             var key_temp = r.news_id + "_" + dtevent_temp;
             groupCounts[key_temp] = (groupCounts[key_temp] || 0) + 1;
           }
@@ -360,7 +360,7 @@ function getCalendar() {
           for (var i in rows) {
             var row = rows[i];
             var dtevent_i = moment(parseInt(row['event_time']));
-            var dtevent = dtevent_i.tz('America/New_York').format("MM/DD HH:mm");
+            var dtevent = dtevent_i.tz('America/New_York').format("MM/DD/YY HH:mm");
             var dttimestamp_i = moment(parseInt(row['timestamp']));
             var dttimestamp = dttimestamp_i.tz('America/New_York').format("HH:mm:ss.SSS");
             var dttimestamp_hover = dttimestamp_i.tz('America/New_York').format("MM/DD HH:mm:ss.SSS");

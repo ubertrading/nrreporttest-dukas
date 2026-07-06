@@ -220,7 +220,7 @@ var prefixInstruments = {
   'FR': ['EURUSD', 'EURJPY', 'EURGBP', 'EURCHF', 'FRA40', 'GER40', 'EUSTX50'],
   'NO': ['USDNOK', 'EURNOK', 'NOKSEK', 'NOKJPY'],
   'SE': ['USDSEK', 'EURSEK', 'NOKSEK', 'SEKJPY'],
-  'NZ': ['NZDUSD', 'NZDJPY', 'EURNZD', 'GBPNZD', 'NZDCHF'],
+  'NZ': ['NZDUSD', 'NZDJPY', 'EURNZD', 'GBPNZD', 'NZDCHF', 'NZDCAD'],
   'CH': ['USDCHF', 'CHFJPY', 'EURCHF', 'GBPCHF', 'AUDCHF', 'CADCHF'],
   'CZ': ['USDCZK', 'EURCZK'],
   'HU': ['USDHUF', 'EURHUF'],

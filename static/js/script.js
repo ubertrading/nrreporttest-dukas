@@ -281,6 +281,9 @@ function openDukasMultiChart(btn) {
     alert('No multi-chart mapping for prefix "' + prefix + '". Use Select... instead.');
     return;
   }
+  
+  // Dukascopy does not support NZDCAD tick data, so we strip it out specifically for the DUKA+ charts
+  instruments = instruments.filter(function(sym) { return sym !== 'NZDCAD'; });
 
   var params = $.param({
     id: $btn.data('newsid'),

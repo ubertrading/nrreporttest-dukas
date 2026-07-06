@@ -172,38 +172,55 @@ def download_bi5(url):
     req = Request(url)
     req.add_header("User-Agent", "Mozilla/5.0")
     decompressed = b""
-    try:
-        resp = urlopen(req, timeout=30)
-        data = resp.read()
-        if not data:
-            _debug_log.append("empty response: {}".format(url))
-        else:
-            # Try standard LZMA/XZ decompression first
-            try:
-                decompressed = lzma.decompress(data)
-            except lzma.LZMAError:
-                pass
-            if not decompressed:
-                # Some Dukascopy files use raw LZMA1 (no XZ container)
+    
+    import time
+    import random
+    
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            resp = urlopen(req, timeout=30)
+            data = resp.read()
+            if not data:
+                _debug_log.append("empty response: {}".format(url))
+                break
+            else:
+                # Try standard LZMA/XZ decompression first
                 try:
-                    decompressed = lzma.decompress(data, format=lzma.FORMAT_ALONE)
+                    decompressed = lzma.decompress(data)
                 except lzma.LZMAError:
                     pass
-            if not decompressed:
-                try:
-                    decompressed = lzma.decompress(data, format=lzma.FORMAT_RAW,
-                                                   filters=[{"id": lzma.FILTER_LZMA1}])
-                except lzma.LZMAError as e:
-                    _debug_log.append("LZMA fail {}: {} (raw_len={})".format(
-                        url.split("/")[-1], e, len(data)))
-    except HTTPError as e:
-        if e.code != 404:
+                if not decompressed:
+                    # Some Dukascopy files use raw LZMA1 (no XZ container)
+                    try:
+                        decompressed = lzma.decompress(data, format=lzma.FORMAT_ALONE)
+                    except lzma.LZMAError:
+                        pass
+                if not decompressed:
+                    try:
+                        decompressed = lzma.decompress(data, format=lzma.FORMAT_RAW,
+                                                       filters=[{"id": lzma.FILTER_LZMA1}])
+                    except lzma.LZMAError as e:
+                        _debug_log.append("LZMA fail {}: {} (raw_len={})".format(
+                            url.split("/")[-1], e, len(data)))
+                break  # Successful fetch and decompress
+        except HTTPError as e:
+            if e.code == 404:
+                return b""  # 404 → cache as empty file
+            if e.code in (503, 502, 504, 429) and attempt < max_retries - 1:
+                sleep_time = (2 ** attempt) + random.uniform(0.1, 1.0)
+                _debug_log.append("HTTP {} for {}. Retrying in {:.2f}s...".format(e.code, url.split("/")[-1], sleep_time))
+                time.sleep(sleep_time)
+                continue
             _debug_log.append("HTTP {}: {}".format(e.code, url))
             raise
-        # 404 → cache as empty file
-    except (URLError, EOFError) as e:
-        _debug_log.append("DL error: {} {}".format(url, e))
-        return b""   # network error: don't cache, retry next time
+        except (URLError, EOFError) as e:
+            if attempt < max_retries - 1:
+                sleep_time = (2 ** attempt) + random.uniform(0.1, 1.0)
+                time.sleep(sleep_time)
+                continue
+            _debug_log.append("DL error: {} {}".format(url, e))
+            return b""   # network error: don't cache, retry next time
 
     # ── save to cache (including empty = 404 / no data) ──────────────
     try:
